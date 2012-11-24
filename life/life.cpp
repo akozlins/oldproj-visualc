@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #define STRICT 1
@@ -18,30 +19,36 @@ HGLRC hglrc;
 
 LRESULT CALLBACK fproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
-  if(msg == WM_DESTROY) PostQuitMessage(0);
-
-  if(msg == WM_KEYDOWN) switch(wp)
+  switch(msg)
   {
-  case 'q':
-  case 'Q':
-    PostMessage(hwnd, WM_CLOSE, 0, 0);
-    break;
-  case 'r':
-  case 'R':
-    for(int y = 0; y < HEIGHT; y++) for(int x = 0; x < WIDTH; x++)
+  case WM_KEYDOWN:
+    switch(wp)
     {
-      cells[y][x] = (11 *  rand()) / (10 * RAND_MAX);
-    }
-    break;
-  case 'g':
-  case 'G':
-    memset(cells, 0, WIDTH * HEIGHT);
-    cells[HEIGHT / 2 + 0][WIDTH / 2 + 0] = 1;
-    cells[HEIGHT / 2 + 1][WIDTH / 2 + 0] = 1;
-    cells[HEIGHT / 2 + 2][WIDTH / 2 + 0] = 1;
-    cells[HEIGHT / 2 + 2][WIDTH / 2 + 1] = 1;
-    cells[HEIGHT / 2 + 1][WIDTH / 2 - 1] = 1;
-    break;
+    case 'q':
+    case 'Q':
+      PostMessage(hwnd, WM_CLOSE, 0, 0);
+      break;
+    case 'r':
+    case 'R':
+      for(int y = 0; y < HEIGHT; y++) for(int x = 0; x < WIDTH; x++)
+      {
+        cells[y][x] = (11 *  rand()) / (10 * RAND_MAX);
+      }
+      break;
+    case 'g':
+    case 'G':
+      memset(cells, 0, WIDTH * HEIGHT);
+      cells[HEIGHT / 2 + 0][WIDTH / 2 + 0] = 1;
+      cells[HEIGHT / 2 + 1][WIDTH / 2 + 0] = 1;
+      cells[HEIGHT / 2 + 2][WIDTH / 2 + 0] = 1;
+      cells[HEIGHT / 2 + 2][WIDTH / 2 + 1] = 1;
+      cells[HEIGHT / 2 + 1][WIDTH / 2 - 1] = 1;
+      break;
+    } // switch(wp)
+    break; // case WM_KEYDOWN
+  case WM_DESTROY:
+    PostQuitMessage(0);
+    break; // case WM_DESTROY
   }
 
   return DefWindowProc(hwnd, msg, wp, lp);
@@ -82,7 +89,7 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
     WS_EX_CLIENTEDGE,
     g_title, g_title,
     WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-    CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
+    0, 0, rect.right - rect.left, rect.bottom - rect.top,
     0, 0, hinst, 0);
 
   HDC hdc = GetDC(hwnd);
@@ -108,31 +115,44 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
   ShowWindow(hwnd, show);
   UpdateWindow(hwnd);
 
+  __int64 it = 0;
+
   MSG msg = { 0 };
-  while(msg.message != WM_QUIT)
+  while(true)
   {
-    if(PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+    while(PeekMessage(&msg, 0, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)
     {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
-    else if(IsWindowVisible(hwnd))
-    {
-      for(int x = 1; x < WIDTH - 1; x++)
-      {
-        cells[0][x] = cells[HEIGHT - 2][x];
-        cells[HEIGHT - 1][x] = cells[1][x];
-      }
-      for(int y = 1; y < HEIGHT - 1; y++)
-      {
-        cells[y][0] = cells[y][WIDTH - 2];
-        cells[y][WIDTH - 1] = cells[y][1];
-      }
-      cells[0][0] = cells[HEIGHT - 2][WIDTH - 2];
-      cells[HEIGHT - 1][WIDTH - 1] = cells[1][1];
-      cells[HEIGHT - 1][0] = cells[1][WIDTH - 2];
-      cells[0][WIDTH - 1] = cells[HEIGHT - 2][1];
+    if(msg.message == WM_QUIT) break;
 
+    for(int x = 1; x < WIDTH - 1; x++)
+    {
+      cells[0][x] = cells[HEIGHT - 2][x];
+      cells[HEIGHT - 1][x] = cells[1][x];
+    }
+    for(int y = 1; y < HEIGHT - 1; y++)
+    {
+      cells[y][0] = cells[y][WIDTH - 2];
+      cells[y][WIDTH - 1] = cells[y][1];
+    }
+    cells[0][0] = cells[HEIGHT - 2][WIDTH - 2];
+    cells[HEIGHT - 1][WIDTH - 1] = cells[1][1];
+    cells[HEIGHT - 1][0] = cells[1][WIDTH - 2];
+    cells[0][WIDTH - 1] = cells[HEIGHT - 2][1];
+
+    for(int y = 1; y < HEIGHT - 1; y++) for(int x = 1; x < WIDTH - 1; x++)
+    {
+      int n = cells[y - 1][x - 1] + cells[y - 1][x] + cells[y - 1][x + 1] +
+              cells[y    ][x - 1] +                   cells[y    ][x + 1] +
+              cells[y + 1][x - 1] + cells[y + 1][x] + cells[y + 1][x + 1];
+      cells_[y][x] = (n == 3) + (n == 2) * cells[y][x];
+    }
+    memcpy(cells, cells_, WIDTH * HEIGHT);
+
+    if(it++ % 4 == 0)
+    {
       glClearColor(0, 0, 0, 1);
       glClear(GL_COLOR_BUFFER_BIT);
 
@@ -140,12 +160,7 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
       glBegin(GL_QUADS);
       for(int y = 1; y < HEIGHT - 1; y++) for(int x = 1; x < WIDTH - 1; x++)
       {
-        int n = cells[y + 1][x - 1] + cells[y + 1][x] + cells[y + 1][x + 1] +
-                cells[y    ][x - 1] +                   cells[y    ][x + 1] +
-                cells[y - 1][x - 1] + cells[y - 1][x] + cells[y - 1][x + 1];
-        cells_[y][x] = (n == 3) + (n == 2) * cells[y][x];
-
-        if(cells_[y][x])
+        if(cells[y][x])
         {
           glVertex2d(x, y);
           glVertex2d(x + 1, y);
@@ -157,8 +172,6 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
       glFlush();
 
       SwapBuffers(hdc);
-
-      memcpy(cells, cells_, WIDTH * HEIGHT);
     }
   }
 
