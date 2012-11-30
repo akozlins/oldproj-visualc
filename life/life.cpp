@@ -99,7 +99,7 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
   pfd.nVersion = 1;
   pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_DRAW_TO_WINDOW;
   pfd.cColorBits = 24;
-  pfd.cDepthBits = 32;
+  pfd.cDepthBits = 16;
   int fmt = ChoosePixelFormat(hdc, &pfd);
   SetPixelFormat(hdc, fmt, &pfd);
   HGLRC hglrc = wglCreateContext(hdc);
@@ -108,9 +108,11 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
   glViewport(0, 0, WIDTH, HEIGHT);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0, WIDTH, HEIGHT, 0, -1, 1);
+  glOrtho(0, WIDTH, HEIGHT, 0, 0, 1);
+  glDisable(GL_DEPTH_TEST);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+  glTranslatef(0.5, 0.5, 0);
 
   ShowWindow(hwnd, show);
   UpdateWindow(hwnd);
@@ -151,21 +153,18 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
     }
     memcpy(cells, cells_, WIDTH * HEIGHT);
 
-    if(it++ % 4 == 0)
+    if(it++ % 1 == 0)
     {
       glClearColor(0, 0, 0, 1);
       glClear(GL_COLOR_BUFFER_BIT);
 
       glColor3d(1, 1, 1);
-      glBegin(GL_QUADS);
+      glBegin(GL_POINTS);
       for(int y = 1; y < HEIGHT - 1; y++) for(int x = 1; x < WIDTH - 1; x++)
       {
         if(cells[y][x])
         {
           glVertex2d(x, y);
-          glVertex2d(x + 1, y);
-          glVertex2d(x + 1, y + 1);
-          glVertex2d(x, y + 1);
         }
       }
       glEnd();
