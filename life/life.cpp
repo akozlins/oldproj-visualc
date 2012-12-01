@@ -14,9 +14,6 @@ const unsigned int HEIGHT = 512;
 unsigned __int8 cells[HEIGHT][WIDTH] = { 0 };
 unsigned __int8 cells_[HEIGHT][WIDTH] = { 0 };
 
-HDC hdc;
-HGLRC hglrc;
-
 LRESULT CALLBACK fproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
   switch(msg)
@@ -24,10 +21,6 @@ LRESULT CALLBACK fproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   case WM_KEYDOWN:
     switch(wp)
     {
-    case 'q':
-    case 'Q':
-      PostMessage(hwnd, WM_CLOSE, 0, 0);
-      break;
     case 'r':
     case 'R':
       for(int y = 0; y < HEIGHT; y++) for(int x = 0; x < WIDTH; x++)
@@ -43,6 +36,10 @@ LRESULT CALLBACK fproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       cells[HEIGHT / 2 + 2][WIDTH / 2 + 0] = 1;
       cells[HEIGHT / 2 + 2][WIDTH / 2 + 1] = 1;
       cells[HEIGHT / 2 + 1][WIDTH / 2 - 1] = 1;
+      break;
+    case 'q':
+    case 'Q':
+      PostMessage(hwnd, WM_CLOSE, 0, 0);
       break;
     } // switch(wp)
     break; // case WM_KEYDOWN
@@ -117,7 +114,10 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
   ShowWindow(hwnd, show);
   UpdateWindow(hwnd);
 
-  __int64 it = 0;
+  SetForegroundWindow(hwnd);
+
+  glClearColor(0, 0, 0, 1);
+  glColor3d(1, 1, 1);
 
   MSG msg = { 0 };
   while(true)
@@ -144,34 +144,18 @@ int CALLBACK WinMain(HINSTANCE hinst, HINSTANCE hprev, LPSTR cmd, int show)
     cells[HEIGHT - 1][0] = cells[1][WIDTH - 2];
     cells[0][WIDTH - 1] = cells[HEIGHT - 2][1];
 
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBegin(GL_POINTS);
     for(int y = 1; y < HEIGHT - 1; y++) for(int x = 1; x < WIDTH - 1; x++)
     {
       int n = cells[y - 1][x - 1] + cells[y - 1][x] + cells[y - 1][x + 1] +
               cells[y    ][x - 1] +                   cells[y    ][x + 1] +
               cells[y + 1][x - 1] + cells[y + 1][x] + cells[y + 1][x + 1];
-      cells_[y][x] = (n == 3) + (n == 2) * cells[y][x];
+      if(cells_[y][x] = (n == 3) || (n == 2) && cells[y][x]) glVertex2d(x, y);
     }
     memcpy(cells, cells_, WIDTH * HEIGHT);
-
-    if(it++ % 1 == 0)
-    {
-      glClearColor(0, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT);
-
-      glColor3d(1, 1, 1);
-      glBegin(GL_POINTS);
-      for(int y = 1; y < HEIGHT - 1; y++) for(int x = 1; x < WIDTH - 1; x++)
-      {
-        if(cells[y][x])
-        {
-          glVertex2d(x, y);
-        }
-      }
-      glEnd();
-      glFlush();
-
-      SwapBuffers(hdc);
-    }
+    glEnd();
+    SwapBuffers(hdc);
   }
 
   wglMakeCurrent(hdc, NULL);
